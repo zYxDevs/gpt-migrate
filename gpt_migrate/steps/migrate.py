@@ -85,7 +85,7 @@ def add_env_files(globals):
     dockerfile_content = ""
     with open(os.path.join(globals.targetdir, 'Dockerfile'), 'r') as file:
         dockerfile_content = file.read()
-    
+
     external_deps = read_from_memory("external_dependencies")
 
     prompt = add_docker_requirements_template.format(dockerfile_content=dockerfile_content,
@@ -94,14 +94,16 @@ def add_env_files(globals):
                                                         targetlang=globals.targetlang,
                                                         guidelines=globals.guidelines)
 
-    external_deps_name, _, external_deps_content = llm_write_file(prompt,
-                    target_path=None,
-                    waiting_message=f"Creating dependencies file required for the Docker environment...",
-                    success_message=None,
-                    globals=globals)
-    
+    external_deps_name, _, external_deps_content = llm_write_file(
+        prompt,
+        target_path=None,
+        waiting_message="Creating dependencies file required for the Docker environment...",
+        success_message=None,
+        globals=globals,
+    )
+
     ''' Refine Dockerfile '''
-    
+
     refine_dockerfile_template = prompt_constructor(HIERARCHY, GUIDELINES, WRITE_CODE, REFINE_DOCKERFILE, SINGLEFILE)
     prompt = refine_dockerfile_template.format(dockerfile_content=dockerfile_content,
                                                 target_directory_structure=build_directory_structure(globals.targetdir),
@@ -109,8 +111,10 @@ def add_env_files(globals):
                                                 external_deps_content=external_deps_content,
                                                 guidelines=globals.guidelines)
 
-    llm_write_file(prompt,
-                    target_path="Dockerfile",
-                    waiting_message=f"Refining Dockerfile based on dependencies required for the Docker environment...",
-                    success_message="Refined Dockerfile with dependencies required for the Docker environment.",
-                    globals=globals)
+    llm_write_file(
+        prompt,
+        target_path="Dockerfile",
+        waiting_message="Refining Dockerfile based on dependencies required for the Docker environment...",
+        success_message="Refined Dockerfile with dependencies required for the Docker environment.",
+        globals=globals,
+    )

@@ -18,7 +18,7 @@ class AI:
             self.model_name = "gpt-3.5-turbo"
     
     def write_code(self, prompt):
-        message=[{"role": "user", "content": str(prompt)}] 
+        message=[{"role": "user", "content": str(prompt)}]
         response = openai.ChatCompletion.create(
             messages=message,
             stream=False,
@@ -29,8 +29,7 @@ class AI:
         if response["choices"][0]["message"]["content"].startswith("INSTRUCTIONS:"):
             return ("INSTRUCTIONS:","",response["choices"][0]["message"]["content"][14:])
         else:
-            code_triples = parse_code_string(response["choices"][0]["message"]["content"])
-            return code_triples
+            return parse_code_string(response["choices"][0]["message"]["content"])
 
     def run(self, prompt):
         message=[{"role": "user", "content": str(prompt)}] 

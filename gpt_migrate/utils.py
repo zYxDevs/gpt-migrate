@@ -15,14 +15,11 @@ def detect_language(source_directory):
         for filename in filenames[2]:
             ext = filename.split('.')[-1]
             file_extensions.append(ext)
-    
+
     extension_counts = Counter(file_extensions)
     most_common_extension, _ = extension_counts.most_common(1)[0]
-    
-    # Determine the language based on the most common file extension
-    language = EXTENSION_TO_LANGUAGE.get(most_common_extension, None)
-    
-    return language
+
+    return EXTENSION_TO_LANGUAGE.get(most_common_extension, None)
 
 def prompt_constructor(*args):
     prompt = ""
@@ -50,7 +47,7 @@ def llm_write_file(prompt,target_path,waiting_message,success_message,globals):
     with yaspin(text=waiting_message, spinner="dots") as spinner:
         file_name,language,file_content = globals.ai.write_code(prompt)[0]
         spinner.ok("✅ ")
-    
+
     if file_name=="INSTRUCTIONS:":
         return "INSTRUCTIONS:","",file_content
 
@@ -63,11 +60,9 @@ def llm_write_file(prompt,target_path,waiting_message,success_message,globals):
 
     if success_message:
         success_text = typer.style(success_message, fg=typer.colors.GREEN)
-        typer.echo(success_text)
     else:
         success_text = typer.style(f"Created {file_name} at {globals.targetdir}", fg=typer.colors.GREEN)
-        typer.echo(success_text)
-    
+    typer.echo(success_text)
     return file_name, language, file_content
 
 def llm_write_files(prompt,target_path,waiting_message,success_message,globals):
@@ -106,17 +101,16 @@ def load_templates_from_directory(directory_path):
 
 def parse_code_string(code_string):
     sections = code_string.split('---')
-    
+
     pattern = re.compile(r'^(.+)\n```(.+?)\n(.*?)\n```', re.DOTALL)
-    
+
     code_triples = []
 
     for section in sections:
-        match = pattern.match(section)
-        if match:
+        if match := pattern.match(section):
             filename, language, code = match.groups()
             code_triples.append((section.split("\n```")[0], language.strip(), code.strip()))
-    
+
     return code_triples
 
 def read_gitignore(path):
@@ -131,10 +125,9 @@ def read_gitignore(path):
     return patterns
 
 def is_ignored(entry_path, gitignore_patterns):
-    for pattern in gitignore_patterns:
-        if fnmatch.fnmatch(entry_path, pattern):
-            return True
-    return False
+    return any(
+        fnmatch.fnmatch(entry_path, pattern) for pattern in gitignore_patterns
+    )
 
 def build_directory_structure(path='.', indent='', is_last=True, parent_prefix='', is_root=True):
     gitignore_patterns = read_gitignore(path) + [".gitignore", "*gpt_migrate/*"] if indent == '' else ["*gpt_migrate/*"]
@@ -147,9 +140,9 @@ def build_directory_structure(path='.', indent='', is_last=True, parent_prefix='
     if indent == '':
         prefix = '|-- ' if not is_root else ''
     elif is_last:
-        prefix = parent_prefix + '└── '
+        prefix = f'{parent_prefix}└── '
     else:
-        prefix = parent_prefix + '├── '
+        prefix = f'{parent_prefix}├── '
 
     if os.path.isdir(path):
         result = indent + prefix + base_name + '/\n' if not is_root else ''
@@ -162,7 +155,13 @@ def build_directory_structure(path='.', indent='', is_last=True, parent_prefix='
             entry_path = os.path.join(path, entry)
             new_parent_prefix = '    ' if is_last else '│   '
             if not is_ignored(entry_path, gitignore_patterns):
-                result += build_directory_structure(entry_path, indent + '    ', index == len(entries) - 1, parent_prefix + new_parent_prefix, is_root=False)
+                result += build_directory_structure(
+                    entry_path,
+                    f'{indent}    ',
+                    index == len(entries) - 1,
+                    parent_prefix + new_parent_prefix,
+                    is_root=False,
+                )
 
     return result
 
@@ -179,22 +178,19 @@ def copy_files(sourcedir, targetdir, excluded_files=[]):
             copy_files(os.path.join(sourcedir, item), os.path.join(targetdir, item))
 
 def construct_relevant_files(files):
-    ret = ""
-    for file in files:
-        name = file[0]
-        content = file[1]
-        ret += name+":\n\n" + "```\n"+content+"\n```\n\n"
-    return ret
+    return "".join(
+        file[0] + ":\n\n" + "```\n" + file[1] + "\n```\n\n" for file in files
+    )
             
 def write_to_memory(filename,content):
-    with open('memory/'+filename, 'a+') as file:
+    with open(f'memory/{filename}', 'a+') as file:
         for item in content:
             if item not in file.read().split("\n"):
                 file.write(item+'\n')
 
 def read_from_memory(filename):
     content = ""
-    with open('memory/'+filename, 'r') as file:
+    with open(f'memory/{filename}', 'r') as file:
         content = file.read()
     return content
 
